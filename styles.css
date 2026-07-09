@@ -1138,9 +1138,9 @@ body {
     background: linear-gradient(135deg, var(--accent-light) 0%, rgba(245, 158, 11, 0.05) 100%);
     border: 1px solid rgba(245, 158, 11, 0.2);
     border-radius: var(--radius-lg);
-    padding: 40px 32px;
-    margin: 48px 0;
-    max-width: 900px;
+    padding: 48px 56px;
+    margin: 48px 24px;
+    max-width: 850px;
     margin-left: auto;
     margin-right: auto;
 }
