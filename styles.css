@@ -1,3 +1,4 @@
+/* iOrganize website styling */
 /* ===== BASE ===== */
 *, *::before, *::after {
     margin: 0;
@@ -854,6 +855,66 @@ body {
     flex-shrink: 0;
 }
 
+/* ===== TESTIMONIALS ===== */
+.testimonials {
+    padding: 120px 0;
+    background: var(--bg-primary);
+}
+
+.testimonials-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 32px;
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.testimonial-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 32px;
+    transition: var(--transition);
+}
+
+.testimonial-card:hover {
+    box-shadow: var(--shadow-lg);
+    border-color: rgba(245, 158, 11, 0.12);
+    transform: translateY(-4px);
+}
+
+.stars {
+    color: #fbbf24;
+    font-size: 0.9rem;
+    margin-bottom: 16px;
+    letter-spacing: 2px;
+}
+
+.testimonial-text {
+    font-size: 0.95rem;
+    color: var(--text-primary);
+    line-height: 1.6;
+    margin-bottom: 20px;
+    font-style: italic;
+}
+
+.testimonial-author {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.author-name {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+}
+
+.author-role {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
 /* ===== PRICING ===== */
 .pricing {
     padding: 120px 0;
@@ -1057,6 +1118,86 @@ body {
     padding: 2px 8px;
     border-radius: 100px;
     margin-left: 4px;
+}
+
+.bundle-note {
+    text-align: center;
+    margin-top: 48px;
+    padding: 24px;
+    background: var(--bg-primary);
+    border-radius: var(--radius-lg);
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.bundle-note strong {
+    color: var(--text-primary);
+}
+
+.comparison-note {
+    background: linear-gradient(135deg, var(--accent-light) 0%, rgba(245, 158, 11, 0.05) 100%);
+    border: 1px solid rgba(245, 158, 11, 0.2);
+    border-radius: var(--radius-lg);
+    padding: 40px 32px;
+    margin: 48px 0;
+    max-width: 900px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.comparison-note h3 {
+    font-size: 1.2rem;
+    color: var(--text-primary);
+    margin-bottom: 24px;
+    text-align: center;
+}
+
+.comparison-table {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin-bottom: 24px;
+}
+
+.comparison-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    padding: 16px 0;
+    border-bottom: 1px solid rgba(245, 158, 11, 0.1);
+    align-items: center;
+    gap: 24px;
+}
+
+.comparison-row:last-child {
+    border-bottom: none;
+}
+
+.comparison-label {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.comparison-price {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--accent);
+}
+
+.comparison-desc {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-top: 4px;
+}
+
+.comparison-text {
+    text-align: center;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+.comparison-text strong {
+    color: var(--text-primary);
 }
 
 /* ===== COMPARISON ===== */
