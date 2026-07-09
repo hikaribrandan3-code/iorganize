@@ -313,7 +313,7 @@
             <div class="section-header">
                 <span class="section-tag" data-i18n="pricing">Pricing</span>
                 <h2 class="section-title" data-i18n="oneTimePurchase">One-time purchase.<br>Yours forever.</h2>
-                <p class="section-subtitle" data-i18n="pricing799">$7.99 USD — A one-time fee, no subscription.</p>
+                <p class="section-subtitle" data-i18n="pricing999">$9.99 USD now — A one-time fee, no subscription. $17.99 later.</p>
             </div>
             <div class="pricing-grid">
                 <!-- Free Plan -->
@@ -339,7 +339,7 @@
                     <div class="pricing-popular" data-i18n="bestValue">Best Value</div>
                     <div class="pricing-card-header">
                         <span class="pricing-badge pricing-badge-pro" data-i18n="pro">PRO</span>
-                        <h3><span data-i18n="proPrice">$7.99</span><span data-i18n="timelyPurchase"> one-time</span></h3>
+                        <h3><span data-i18n="proPrice">$9.99</span><span data-i18n="timelyPurchase"> one-time</span></h3>
                         <p class="pricing-desc" data-i18n="allForever">All of iOrganize, forever.</p>
                     </div>
                     <ul class="pricing-features">
@@ -350,7 +350,7 @@
                         <li><span class="check">✓</span> <span data-i18n="fullHistory">Full activity history</span></li>
                         <li><span class="check">✓</span> <span data-i18n="prioritySupport">Priority support</span> <span class="support-tag">WhatsApp / Telegram</span></li>
                     </ul>
-                    <a href="iOrganize.zip" class="btn btn-primary btn-large" download data-i18n="upgradeBtn">Upgrade to Pro</a>
+                    <button class="btn btn-primary btn-large" onclick="openCheckoutModal()" style="width: 100%;">Upgrade to Pro — $9.99</button>
                     <p class="pricing-footer" data-i18n="payOnce">Pay once, own forever. No recurring fees.</p>
                 </div>
             </div>
@@ -368,7 +368,7 @@
                         <div class="comparison-desc">($180/year)</div>
                     </div>
                 </div>
-                <p class="comparison-text" data-i18n="futurePrice"><strong>Future pricing:</strong> iOrganize will increase to $12.99 as more features ship. Grab it at $7.99 while early.</p>
+                <p class="comparison-text" data-i18n="futurePrice"><strong>Early bird pricing:</strong> iOrganize launches at $9.99. Price will increase to $17.99 as features ship. Grab it now while early.</p>
             </div>
             <div class="bundle-note">
                 <p data-i18n="isuite">Part of <strong>iSuite Office</strong> — a collection of small, focused Mac utilities built to run 100% on-device. Own more than one? Bundle pricing is available.</p>
@@ -532,6 +532,118 @@
             </div>
         </div>
     </footer>
+
+    <!-- Checkout Modal -->
+    <div id="checkout-modal" class="checkout-modal" style="display: none;">
+        <div class="checkout-container">
+            <!-- Step 1: Customer Info -->
+            <div id="checkout-step-1" class="checkout-step">
+                <div class="checkout-header">
+                    <h2>Get iOrganize Pro</h2>
+                    <p>iOrganize Pro — Unlimited rules + scheduled automation</p>
+                </div>
+
+                <form id="customer-form" style="margin-bottom: 30px;">
+                    <div class="form-group">
+                        <label for="customer-name">Name (optional)</label>
+                        <input type="text" id="customer-name" placeholder="Your name" class="form-input">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="customer-email">Email *</label>
+                        <input type="email" id="customer-email" placeholder="you@email.com" class="form-input" required>
+                    </div>
+
+                    <div style="display: flex; gap: 12px;">
+                        <button type="button" class="btn btn-outline" onclick="closeCheckoutModal()" style="flex: 1;">
+                            Cancel
+                        </button>
+                        <button type="button" class="btn btn-primary" onclick="proceedToPayment()" style="flex: 1;">
+                            Continue
+                        </button>
+                    </div>
+                </form>
+
+                <p style="font-size: 0.85rem; color: #999; text-align: center;">
+                    Your information is safe and encrypted.
+                </p>
+            </div>
+
+            <!-- Step 2: Payment Method -->
+            <div id="checkout-step-2" class="checkout-step" style="display: none;">
+                <div class="checkout-header">
+                    <h2>Choose payment method</h2>
+                    <p id="payment-email" style="color: #666; font-size: 0.95rem;"></p>
+                </div>
+
+                <!-- Method selector (shown first) -->
+                <div id="payment-method-selector" style="display: flex; flex-direction: column; gap: 0; margin-bottom: 30px;">
+                    <button type="button" class="payment-method-button" onclick="selectPaymentMethod('paypal')" style="border-bottom: none; border-radius: 12px 12px 0 0;">
+                        <div style="display: flex; align-items: center; gap: 16px; width: 100%;">
+                            <div style="width: 50px; height: 40px; background: #003087; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                <svg width="32" height="20" viewBox="0 0 32 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M8 2H24C26.2 2 28 3.8 28 6V14C28 16.2 26.2 18 24 18H8C5.8 18 4 16.2 4 14V6C4 3.8 5.8 2 8 2Z" fill="white"/>
+                                    <text x="16" y="13" font-size="7" font-weight="bold" fill="#003087" text-anchor="middle" font-family="Arial">PayPal</text>
+                                </svg>
+                            </div>
+                            <div style="flex: 1; text-align: left;">
+                                <div style="font-weight: 600; color: #1d1d1f;">PayPal</div>
+                                <div style="font-size: 0.85rem; color: #86868b;">Fast and secure</div>
+                            </div>
+                            <div style="font-weight: 600; color: #1d1d1f;">$9.99</div>
+                        </div>
+                    </button>
+
+                    <!-- Divider with "Powered by" text -->
+                    <div style="display: flex; align-items: center; gap: 12px; padding: 16px; background: #f5f5f7; border-bottom: 1px solid #e5e5e7;">
+                        <div style="flex: 1; height: 1px; background: #e5e5e7;"></div>
+                        <span style="font-size: 0.75rem; color: #999; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 500;">Powered by PayPal & Mercado Pago</span>
+                        <div style="flex: 1; height: 1px; background: #e5e5e7;"></div>
+                    </div>
+
+                    <button type="button" class="payment-method-button" onclick="selectPaymentMethod('mercadopago')" style="border-top: none; border-radius: 0 0 12px 12px;">
+                        <div style="display: flex; align-items: center; gap: 16px; width: 100%;">
+                            <div style="width: 50px; height: 40px; background: #009ee3; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                <svg width="32" height="20" viewBox="0 0 32 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <circle cx="8" cy="10" r="3" fill="white"/>
+                                    <circle cx="16" cy="10" r="3" fill="white"/>
+                                    <circle cx="24" cy="10" r="3" fill="white"/>
+                                </svg>
+                            </div>
+                            <div style="flex: 1; text-align: left;">
+                                <div style="font-weight: 600; color: #1d1d1f;">Mercado Pago</div>
+                                <div style="font-size: 0.85rem; color: #86868b;">Cards and wallets</div>
+                            </div>
+                            <div style="font-weight: 600; color: #1d1d1f;">$9.99</div>
+                        </div>
+                    </button>
+                </div>
+
+                <!-- PayPal buttons render here (hidden until PayPal is chosen) -->
+                <div id="paypal-render-container" style="display: none; margin-bottom: 20px;"></div>
+
+                <!-- Loading state for Mercado Pago redirect -->
+                <div id="mp-loading-state" style="display: none; text-align: center; padding: 20px; margin-bottom: 20px; color: #666;">
+                    Redirecting to Mercado Pago...
+                </div>
+
+                <div id="payment-nav-buttons" style="display: flex; gap: 12px;">
+                    <button type="button" class="btn btn-outline" onclick="backToStep1()" style="flex: 1;">
+                        Back
+                    </button>
+                    <button type="button" class="btn btn-outline" onclick="closeCheckoutModal()" style="flex: 1;">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <!-- PayPal SDK -->
+    <script src="https://www.paypal.com/sdk/js?client-id=AUQnpwD7KquTmCrB4eopOKPb-qd5m_pwi8ToTts3hyllL-C4UTl1WbfYBHY_vsK5FOY-jLH6EaMA6apu&currency=USD"></script>
 
     <script src="translations.js"></script>
     <script src="script.js"></script>
