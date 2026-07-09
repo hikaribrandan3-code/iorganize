@@ -138,7 +138,25 @@ function animateCounter(element, target, suffix = '') {
     requestAnimationFrame(update);
 }
 
+// ===== LANGUAGE SWITCHER =====
+function updateLanguageButtons(lang) {
+    document.querySelectorAll('.lang-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    document.querySelector(`[onclick="setLanguage('${lang}')"]`).classList.add('active');
+}
+
+// Override setLanguage to include button update
+const originalSetLanguage = window.setLanguage;
+window.setLanguage = function(lang) {
+    originalSetLanguage(lang);
+    updateLanguageButtons(lang);
+};
+
 // ===== INITIALIZE ON DOM READY =====
 document.addEventListener('DOMContentLoaded', () => {
     initDemoAnimation();
+    // Initialize language buttons
+    const currentLang = localStorage.getItem('ioLanguage') || 'en';
+    updateLanguageButtons(currentLang);
 });
