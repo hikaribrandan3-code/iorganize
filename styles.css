@@ -954,6 +954,7 @@ body {
     border-color: var(--accent);
     border-width: 2px;
     box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.06);
+    padding-top: 48px;
 }
 
 .pricing-popular {
@@ -1606,6 +1607,19 @@ body {
     .pricing-grid {
         grid-template-columns: 1fr;
         max-width: 500px;
+        gap: 24px;
+    }
+
+    .pricing-card {
+        padding: 40px 24px;
+    }
+
+    .pricing-card-pro {
+        padding-top: 56px;
+    }
+
+    .pricing-card h3 {
+        font-size: 1.8rem;
     }
 
     .footer-top {
@@ -1723,6 +1737,19 @@ body {
 
     .pricing-card {
         padding: 32px 20px;
+    }
+
+    .pricing-card-pro {
+        padding-top: 52px;
+    }
+
+    .pricing-card h3 {
+        font-size: 1.6rem;
+    }
+
+    .pricing-popular {
+        font-size: 0.65rem;
+        padding: 4px 12px;
     }
 
     .contact-card {
