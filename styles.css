@@ -1711,49 +1711,99 @@ body {
 }
 
 @media (max-width: 480px) {
+    .hero {
+        padding: 80px 0 60px;
+    }
+
     .hero-title {
-        font-size: 1.9rem;
+        font-size: 1.7rem;
+    }
+
+    .hero-subtitle {
+        font-size: 0.9rem;
+    }
+
+    .hero-stats {
+        gap: 16px;
+    }
+
+    .stat-number {
+        font-size: 1.6rem;
+    }
+
+    .stat-label {
+        font-size: 0.7rem;
     }
 
     .btn {
-        padding: 12px 20px;
-        font-size: 0.85rem;
+        padding: 10px 16px;
+        font-size: 0.8rem;
         width: 100%;
         justify-content: center;
     }
 
     .hero-cta-group {
         flex-direction: column;
+        gap: 12px;
+    }
+
+    .features {
+        padding: 80px 0;
     }
 
     .feature-card {
-        padding: 24px;
+        padding: 20px;
     }
 
-    .comparison-cell {
-        padding: 14px 12px;
-        font-size: 0.8rem;
+    .feature-card h3 {
+        font-size: 1rem;
+    }
+
+    .feature-card p {
+        font-size: 0.85rem;
+    }
+
+    .pricing {
+        padding: 80px 0;
     }
 
     .pricing-card {
-        padding: 32px 20px;
+        padding: 24px 16px;
     }
 
     .pricing-card-pro {
-        padding-top: 52px;
+        padding-top: 48px;
     }
 
     .pricing-card h3 {
-        font-size: 1.6rem;
+        font-size: 1.4rem;
     }
 
     .pricing-popular {
-        font-size: 0.65rem;
-        padding: 4px 12px;
+        font-size: 0.6rem;
+        padding: 3px 10px;
+    }
+
+    .comparison-note {
+        padding: 32px 20px;
+        margin: 40px 16px;
+    }
+
+    .comparison-row {
+        padding: 12px 0;
+        gap: 12px;
+    }
+
+    .comparison-label {
+        font-size: 0.9rem;
+    }
+
+    .comparison-price {
+        font-size: 1.1rem;
     }
 
     .contact-card {
-        padding: 24px;
+        padding: 20px;
     }
 }
 
