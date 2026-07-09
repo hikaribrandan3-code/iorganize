@@ -229,14 +229,25 @@ function getLanguage() {
 function updatePageText(lang) {
   const t = translations[lang];
 
-  // Update text elements - simplified approach
+  // Update text elements
   document.querySelectorAll('[data-i18n]').forEach(el => {
     const key = el.getAttribute('data-i18n');
     if (t[key]) {
       if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
         el.placeholder = t[key];
       } else {
-        el.innerHTML = t[key];
+        // For elements with br tags or other HTML, use innerHTML
+        // For simple text, use textContent to avoid XSS
+        const text = t[key];
+        if (text.includes('<br') || text.includes('&br;')) {
+          el.innerHTML = text;
+        } else if (el.childNodes.length === 0 || (el.childNodes.length === 1 && el.childNodes[0].nodeType === 3)) {
+          // Simple text node
+          el.textContent = text;
+        } else {
+          // Has other elements (like spans), update textContent of direct text only
+          el.textContent = text;
+        }
       }
     }
   });
