@@ -1,0 +1,6 @@
+.vercel
+macos-source/.build/
+macos-source/.swiftpm/
+macos-source/dist/
+dist/
+node_modules/
