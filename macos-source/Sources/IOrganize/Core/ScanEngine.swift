@@ -52,7 +52,7 @@ enum JunkCategory: String, CaseIterable, Identifiable {
         case .orphanedFiles: return "Support files from uninstalled apps"
         case .duplicateDownloads: return "Identical copies in Downloads"
         case .oldDownloads: return "Downloads untouched for 30+ days"
-        case .languageFiles: return "Unused language packs inside apps"
+        case .languageFiles: return "Language packs inside apps (information only)"
         case .browserCaches: return "Safari / Chrome / Firefox caches"
         case .trashBin: return "Files already sitting in the Trash"
         case .mediaduplicates: return "Duplicate photos & videos (keeps most recent)"
@@ -75,10 +75,7 @@ enum JunkCategory: String, CaseIterable, Identifiable {
     /// Categories that touch user documents or app bundles start unchecked —
     /// the user opts in per scan.
     var defaultEnabled: Bool {
-        switch self {
-        case .oldDownloads, .languageFiles, .trashBin, .mediaduplicates: return false
-        default: return true
-        }
+        false
     }
 }
 
@@ -86,6 +83,13 @@ struct JunkItem: Identifiable {
     let id = UUID()
     let url: URL
     let size: Int64
+    let duplicateOf: URL?
+
+    init(url: URL, size: Int64, duplicateOf: URL? = nil) {
+        self.url = url
+        self.size = size
+        self.duplicateOf = duplicateOf
+    }
 }
 
 struct CategoryResult: Identifiable {
@@ -285,7 +289,11 @@ final class ScanEngine: ObservableObject {
                     let b = (try? $1.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate ?? .distantPast
                     return a > b
                 }
-                duplicates += sorted.dropFirst().map { JunkItem(url: $0, size: size) }
+                let verified = Dictionary(grouping: sorted, by: { fullHash($0) ?? UUID().uuidString })
+                for group in verified.values where group.count > 1 {
+                    let keeper = group[0]
+                    duplicates += group.dropFirst().map { JunkItem(url: $0, size: size, duplicateOf: keeper) }
+                }
             }
         }
         return duplicates
@@ -307,6 +315,25 @@ final class ScanEngine: ObservableObject {
         return hasher.finalize().map { String(format: "%02x", $0) }.joined()
     }
 
+    /// Stream the complete file before calling a duplicate safe to remove.
+    nonisolated private func fullHash(_ url: URL) -> String? {
+        guard let handle = try? FileHandle(forReadingFrom: url) else { return nil }
+        defer { try? handle.close() }
+        var hasher = SHA256()
+        do {
+            while let data = try handle.read(upToCount: 1024 * 1024), !data.isEmpty {
+                hasher.update(data: data)
+            }
+            return hasher.finalize().map { String(format: "%02x", $0) }.joined()
+        } catch { return nil }
+    }
+
+    nonisolated private func stillDuplicate(_ item: JunkItem) -> Bool {
+        guard let keeper = item.duplicateOf,
+              let first = fullHash(item.url), let second = fullHash(keeper) else { return false }
+        return first == second
+    }
+
     nonisolated private func collectOldDownloads() -> [JunkItem] {
         let downloads = home.appendingPathComponent("Downloads")
         let cutoff = Date().addingTimeInterval(-30 * 86_400)
@@ -321,8 +348,8 @@ final class ScanEngine: ObservableObject {
         }
     }
 
-    /// Unused .lproj language packs in third-party apps. Apple-signed apps
-    /// and anything under /System are never touched; removal goes to Trash.
+    /// Informational inventory only. Removing files inside app bundles can
+    /// invalidate signatures or break updates, so cleanup never selects them.
     nonisolated private func collectLanguageFiles() -> [JunkItem] {
         let keep: Set<String> = ["en", "english", "base", "es", "pt", "pt-br",
                                  Locale.current.language.languageCode?.identifier.lowercased() ?? "en"]
@@ -344,26 +371,35 @@ final class ScanEngine: ObservableObject {
     // MARK: Clean
 
     func toggle(_ category: JunkCategory) {
+        guard category != .languageFiles else { return }
         guard let index = results.firstIndex(where: { $0.category == category }) else { return }
         results[index].enabled.toggle()
     }
 
     func clean() {
         guard case .results = phase else { return }
-        let selected = results.filter { $0.enabled && !$0.items.isEmpty }
+        let selected = results.filter { $0.enabled && !$0.items.isEmpty && $0.category != .languageFiles }
         guard !selected.isEmpty else { return }
         phase = .cleaning(0)
 
         Task.detached(priority: .userInitiated) { [weak self] in
             guard let self else { return }
             var freed: Int64 = 0
+            var failed = 0
+            var movedToTrash = 0
             let totalItems = selected.reduce(0) { $0 + $1.items.count }
             var processed = 0
 
             for result in selected {
                 for item in result.items {
-                    if let bytes = try? SafetyGuard.remove(item.url, viaTrash: result.category.deletesViaTrash) {
-                        freed += bytes
+                    if item.duplicateOf != nil && !self.stillDuplicate(item) {
+                        failed += 1
+                    } else {
+                        do {
+                            let bytes = try SafetyGuard.remove(item.url, viaTrash: result.category.deletesViaTrash)
+                            if result.category.deletesViaTrash { movedToTrash += 1 }
+                            else { freed += bytes }
+                        } catch { failed += 1 }
                     }
                     processed += 1
                     let progress = Double(processed) / Double(totalItems)
@@ -372,10 +408,12 @@ final class ScanEngine: ObservableObject {
             }
 
             let totalFreed = freed
+            let totalFailed = failed
+            let totalTrashed = movedToTrash
             await MainActor.run {
                 self.phase = .done(totalFreed)
                 ActivityLog.shared.add(rule: "Smart Sanitize",
-                                       message: "Cleanup freed \(FileSizer.format(totalFreed))")
+                                       message: "Freed \(FileSizer.format(totalFreed)); moved \(totalTrashed) to Trash; skipped \(totalFailed)")
             }
         }
     }
@@ -415,8 +453,12 @@ final class ScanEngine: ObservableObject {
                 let bDate = (try? b.0.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate ?? .distantPast
                 return aDate > bDate
             }
-            for (url, size) in sorted.dropFirst() {
-                items.append(JunkItem(url: url, size: size))
+            let verified = Dictionary(grouping: sorted, by: { fullHash($0.0) ?? UUID().uuidString })
+            for group in verified.values where group.count > 1 {
+                let keeper = group[0].0
+                for (url, size) in group.dropFirst() {
+                    items.append(JunkItem(url: url, size: size, duplicateOf: keeper))
+                }
             }
         }
         return items
@@ -478,7 +520,6 @@ final class ScanEngine: ObservableObject {
             home.appendingPathComponent("Downloads"),
             home.appendingPathComponent("Desktop"),
             home.appendingPathComponent("Pictures"),
-            home.appendingPathComponent("Library/Caches/com.apple.bird")
         ]
 
         for searchPath in searchPaths {

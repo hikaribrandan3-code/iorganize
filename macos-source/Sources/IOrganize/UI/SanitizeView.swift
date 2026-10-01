@@ -5,6 +5,7 @@ struct SanitizeView: View {
     @EnvironmentObject var scanner: ScanEngine
     @EnvironmentObject var app: AppState
     @State private var previewingCategory: JunkCategory?
+    @State private var showingCleanupConfirmation = false
 
     var body: some View {
         VStack(spacing: 20) {
@@ -25,6 +26,12 @@ struct SanitizeView: View {
                     .environmentObject(scanner)
             }
         }
+        .alert("Review cleanup", isPresented: $showingCleanupConfirmation) {
+            Button("Cancel", role: .cancel) {}
+            Button("Clean Selected Files", role: .destructive) { scanner.clean() }
+        } message: {
+            Text("\(selectedItemCount) items selected. \(trashItemCount) will move to Trash and \(permanentItemCount) will be deleted permanently. Review each category before continuing.")
+        }
     }
 
     // MARK: Idle
@@ -35,7 +42,7 @@ struct SanitizeView: View {
             Image(systemName: "sparkles")
                 .font(.system(size: 44))
                 .foregroundStyle(Theme.gold)
-            Text("Reclaim disk space in one click")
+            Text("Review cleanup candidates on your Mac")
                 .font(.system(size: 22, weight: .bold))
                 .foregroundStyle(Theme.textPrimary)
             Text("iOrganize scans caches, logs, temp files, duplicates and more.\nEverything runs locally — nothing ever leaves this Mac.")
@@ -132,7 +139,7 @@ struct SanitizeView: View {
 
     private var totalRow: some View {
         HStack {
-            Text("Total Space to Free:")
+            Text("Selected Size:")
                 .font(.system(size: 15, weight: .bold))
             Spacer()
             Text(FileSizer.format(scanner.totalSelectedBytes))
@@ -149,12 +156,22 @@ struct SanitizeView: View {
         return false
     }
 
+    private var selectedItemCount: Int { trashItemCount + permanentItemCount }
+    private var trashItemCount: Int {
+        scanner.results.filter { $0.enabled && $0.category.deletesViaTrash && $0.category != .languageFiles }
+            .reduce(0) { $0 + $1.items.count }
+    }
+    private var permanentItemCount: Int {
+        scanner.results.filter { $0.enabled && !$0.category.deletesViaTrash }
+            .reduce(0) { $0 + $1.items.count }
+    }
+
     @ViewBuilder
     private var footer: some View {
         switch scanner.phase {
         case .results:
             Button {
-                scanner.clean()
+                showingCleanupConfirmation = true
             } label: {
                 Label("Clean Now", systemImage: "trash.fill")
                     .font(.system(size: 15, weight: .semibold))
@@ -189,7 +206,7 @@ struct SanitizeView: View {
                     Rectangle().fill(Theme.gold).frame(height: 4).clipShape(Capsule())
                 }
                 .frame(maxWidth: 460)
-                Text("Cleanup Complete! (\(FileSizer.format(freed)) Freed)")
+                Text("Cleanup complete. \(FileSizer.format(freed)) permanently freed; Trash items still occupy space.")
                     .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(Theme.textSecondary)
             }
@@ -317,7 +334,7 @@ private struct CategoryRow: View {
             ))
             .toggleStyle(.checkbox)
             .labelsHidden()
-            .disabled(result.items.isEmpty)
+            .disabled(result.items.isEmpty || result.category == .languageFiles)
 
             RoundedRectangle(cornerRadius: 8, style: .continuous)
                 .fill(Theme.cardElevated)

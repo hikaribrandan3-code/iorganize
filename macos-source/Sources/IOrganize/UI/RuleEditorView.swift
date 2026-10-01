@@ -15,6 +15,7 @@ struct RuleEditorView: View {
     @State private var actionKind: ActionKind
     @State private var actionParam: String
     @State private var schedule: RuleSchedule
+    @State private var showingAdvancedWarning = false
     private let existingEnabled: Bool
     private let existingLastRun: Date?
 
@@ -63,8 +64,12 @@ struct RuleEditorView: View {
                     .keyboardShortcut(.cancelAction)
                 Spacer()
                 Button {
-                    onSave(builtRule)
-                    dismiss()
+                    if actionKind == .runScript || actionKind == .deletePermanently {
+                        showingAdvancedWarning = true
+                    } else {
+                        onSave(builtRule)
+                        dismiss()
+                    }
                 } label: {
                     Text("Save Rule")
                         .font(.system(size: 13, weight: .semibold))
@@ -82,6 +87,17 @@ struct RuleEditorView: View {
         }
         .frame(width: 560, height: 650)
         .background(Theme.windowBackground)
+        .alert("Advanced action", isPresented: $showingAdvancedWarning) {
+            Button("Cancel", role: .cancel) {}
+            Button("Save Rule", role: .destructive) {
+                onSave(builtRule)
+                dismiss()
+            }
+        } message: {
+            Text(actionKind == .runScript
+                 ? "This script runs with your Mac user permissions on matching files. Review the script before enabling the rule."
+                 : "Matching files will be permanently deleted without going to Trash whenever this rule runs.")
+        }
     }
 
     private var canSave: Bool {
@@ -252,6 +268,9 @@ struct RuleEditorView: View {
                 }
                 .padding(10)
                 .card()
+                Text("Advanced: scripts can read or change any files your Mac account can access. Review the script before enabling this rule.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(Theme.danger)
             case .none:
                 if actionKind == .deletePermanently {
                     Label("Permanent — files skip the Trash and cannot be recovered.",

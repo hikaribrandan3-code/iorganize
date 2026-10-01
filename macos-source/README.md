@@ -1,28 +1,35 @@
-# iOrganize for macOS — source
+# iOrganize native app
 
-A SwiftUI file organization utility with Auto-Flow rules and Smart Sanitize scans. The app is free and open source under the MIT License. There are no paid tiers, license checks, account requirements, telemetry, or cloud services in the native app.
+Source for the macOS app in [`Sources/IOrganize`](Sources/IOrganize). SwiftUI handles the interface; `RuleEngine` watches and applies folder rules; `ScanEngine` gathers cleanup candidates; `SafetyGuard` limits built-in removals. Rules and activity stay on this Mac.
 
 ## Requirements
 
 - macOS 14 or later
-- Xcode 16 / Swift 6.1 toolchain
+- Xcode 16 / Swift 6.1 compatible toolchain and Xcode Command Line Tools
+- No third-party packages, backend, account, or API key
 
 ## Build
 
 From this directory:
 
 ```sh
-make app
+make app                         # dist/iOrganize.app
+make zip                         # dist/iOrganize.zip
 ```
 
-The app bundle is written to `dist/iOrganize.app`. To create a ZIP for local distribution, run `make zip`; it writes `dist/iOrganize.zip`. The Makefile applies an ad-hoc signature for local use. The app is not notarized, so macOS may show a first-open security prompt. Review the source before granting the app file access.
+`make app` uses the standard Xcode toolchain. `USE_TOOLCHAIN_FIX=1` is an explicit workaround for a machine with a separately installed local Swift toolchain fix; ordinary builds do not need it. The ZIP contains an ad-hoc signed, unnotarized app. Open it through Finder and follow macOS's first-launch prompt if needed. No app is installed automatically by these commands.
 
-## What it does
+## Focused safety check
 
-- Watches selected folders and evaluates user-defined file rules
-- Supports conditions and actions such as move, rename, archive, Trash, permanent deletion, open-with, and script execution
-- Runs rules on demand and on configured schedules
-- Scans selected folders and previews cleanup candidates
-- Uses local file access; it has no account, license service, or network backend
+The test below uses only files it creates under `/private/tmp`; it never scans or cleans your real folders.
 
-This source reflects the recovered project and has not had a formal compatibility or safety audit. Permanent deletion and custom script actions can be destructive; configure rules carefully.
+```sh
+swiftc Sources/IOrganize/Core/SafetyGuard.swift Tests/SafetyGuardCheck.swift -o /private/tmp/iorganize-safety-check
+/private/tmp/iorganize-safety-check
+```
+
+## Operation and limits
+
+Smart Sanitize requires scan, category selection, preview, and confirmation. Cache/log/temporary categories delete permanently; document categories move to Trash. Language packs inside app bundles are informational only. Duplicate candidates get complete SHA-256 checks during scan and again before removal. Selected folder rules act only on direct children and reject symlink escapes; scripts remain an advanced user-supplied action with the user's full permissions. An app running with user permissions cannot guarantee that every file operation succeeds: macOS privacy controls, missing files, changed files, and destination permissions can block it. The activity log reports rule failures. Rule scheduling and folder watching operate while iOrganize is open.
+
+The app is free under the MIT License. It is a personal utility with known automatic filing reliability limits, not a backup replacement. See [project history and verification](../DEVELOPMENT_NOTES.md).

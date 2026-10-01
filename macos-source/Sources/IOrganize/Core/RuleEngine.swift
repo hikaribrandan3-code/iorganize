@@ -144,16 +144,21 @@ final class RuleEngine: ObservableObject {
         let busyExtensions: Set<String> = ["crdownload", "download", "part", "partial", "tmp"]
 
         var acted = 0
+        var failures = 0
         var lastMessage = ""
         for url in contents {
             guard !busyExtensions.contains(url.pathExtension.lowercased()),
                   !skiplist.contains(url.path),
+                  SafetyGuard.isRuleItem(url, in: folderURL),
                   rule.matches(url) else { continue }
             do {
-                lastMessage = try execute(rule.action, on: url)
+                lastMessage = try execute(rule.action, on: url, in: folderURL)
                 acted += 1
             } catch {
                 skiplist.insert(url.path)
+                failures += 1
+                ActivityLog.shared.add(rule: rule.name,
+                                       message: "Skipped \(url.lastPathComponent): \(error.localizedDescription)")
             }
         }
 
@@ -169,15 +174,24 @@ final class RuleEngine: ObservableObject {
                 : "\(acted) files — \(rule.action.summary.lowercased())"
             ActivityLog.shared.add(rule: rule.name, message: summary)
         }
+        if failures > 0 && acted == 0 {
+            ActivityLog.shared.add(rule: rule.name, message: "\(failures) file action(s) failed; review the activity log")
+        }
     }
 
     /// Performs one action on one file. Throws on failure so the caller can
     /// skiplist the file. Returns a human summary for the activity log.
-    private func execute(_ action: RuleAction, on url: URL) throws -> String {
+    private func execute(_ action: RuleAction, on url: URL, in folder: URL) throws -> String {
         let fm = FileManager.default
+        guard SafetyGuard.isRuleItem(url, in: folder) else {
+            throw NSError(domain: "iOrganize", code: 5, userInfo: [NSLocalizedDescriptionKey: "File escaped the watched folder"])
+        }
         switch action {
         case .moveToFolder(let path):
             let destDir = URL(fileURLWithPath: path)
+            guard SafetyGuard.isRuleDestination(destDir) else {
+                throw NSError(domain: "iOrganize", code: 6, userInfo: [NSLocalizedDescriptionKey: "Destination must be inside your home folder"])
+            }
             try fm.createDirectory(at: destDir, withIntermediateDirectories: true)
             let dest = uniqueDestination(destDir.appendingPathComponent(url.lastPathComponent))
             try fm.moveItem(at: url, to: dest)
@@ -185,7 +199,8 @@ final class RuleEngine: ObservableObject {
 
         case .rename(let pattern):
             let newName = expand(pattern, for: url)
-            guard newName != url.lastPathComponent, !newName.isEmpty else {
+            guard newName != url.lastPathComponent, !newName.isEmpty,
+                  newName != ".", newName != "..", !newName.contains("/") else {
                 throw NSError(domain: "iOrganize", code: 2)
             }
             let dest = uniqueDestination(url.deletingLastPathComponent().appendingPathComponent(newName))
@@ -205,15 +220,15 @@ final class RuleEngine: ObservableObject {
             guard ditto.terminationStatus == 0 else {
                 throw NSError(domain: "iOrganize", code: 4)
             }
-            try fm.trashItem(at: url, resultingItemURL: nil)
+            _ = try SafetyGuard.removeRuleItem(url, in: folder, viaTrash: true)
             return "\(url.lastPathComponent) → \(zipURL.lastPathComponent)"
 
         case .moveToTrash:
-            try fm.trashItem(at: url, resultingItemURL: nil)
+            _ = try SafetyGuard.removeRuleItem(url, in: folder, viaTrash: true)
             return "\(url.lastPathComponent) moved to Trash"
 
         case .deletePermanently:
-            _ = try SafetyGuard.remove(url, viaTrash: false)
+            _ = try SafetyGuard.removeRuleItem(url, in: folder, viaTrash: false)
             return "\(url.lastPathComponent) deleted"
 
         case .openWith(let appPath):
@@ -229,9 +244,17 @@ final class RuleEngine: ObservableObject {
             let proc = Process()
             proc.executableURL = URL(fileURLWithPath: "/bin/zsh")
             proc.arguments = [scriptPath, url.path]
+            let fileName = url.lastPathComponent
+            proc.terminationHandler = { finished in
+                let status = finished.terminationStatus
+                Task { @MainActor in
+                    ActivityLog.shared.add(rule: "Script",
+                                           message: "\(fileName): exit status \(status)")
+                }
+            }
             try proc.run()
             skiplist.insert(url.path)
-            return "Script ran on \(url.lastPathComponent)"
+            return "Script started on \(url.lastPathComponent)"
         }
     }
 

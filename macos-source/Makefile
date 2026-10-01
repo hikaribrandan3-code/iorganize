@@ -1,13 +1,15 @@
 # iOrganize — build & packaging
 #
-# Standard Xcode builds need no local workaround. If a matching workaround
-# already exists for the affected Command Line Tools install, use it.
+# Standard Xcode builds need no local workaround. Set USE_TOOLCHAIN_FIX=1 only
+# on a machine with the local Command Line Tools workaround installed.
 
 TOOLCHAIN_FIX := $(HOME)/.hikari-swiftpm-libs
+ifeq ($(USE_TOOLCHAIN_FIX),1)
 ifneq ($(wildcard $(TOOLCHAIN_FIX)/swiftc),)
 export SWIFTPM_CUSTOM_LIBS_DIR := $(TOOLCHAIN_FIX)
 export SWIFT_EXEC := $(TOOLCHAIN_FIX)/swiftc
 SWIFT_OVERLAY := -vfsoverlay $(TOOLCHAIN_FIX)/mask.yaml
+endif
 endif
 
 APP_NAME := IOrganize

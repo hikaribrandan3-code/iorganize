@@ -1,9 +1,7 @@
 import Foundation
 
-/// Every deletion in the app funnels through here. A path is only removable
-/// if it resolves (symlinks followed) to a location strictly *inside* one of
-/// the allowed roots — never the root itself, never anything on the deny
-/// list. This is the "never touches system-critical files" guarantee.
+/// Guardrails for built-in cleanup and destructive folder rules. User-supplied
+/// scripts are arbitrary code and cannot be constrained by these checks.
 enum SafetyGuard {
     static let home = FileManager.default.homeDirectoryForCurrentUser.path
 
@@ -18,7 +16,6 @@ enum SafetyGuard {
             NSTemporaryDirectory(),
             "/private/tmp",
             "/private/var/tmp",
-            "/Applications",
         ]
     }
 
@@ -50,23 +47,67 @@ enum SafetyGuard {
 
     /// True only when `url` resolves to a real path strictly inside an
     /// allowed root.
-    static func isRemovable(_ url: URL) -> Bool {
+    static func isRemovable(_ url: URL, viaTrash: Bool = false) -> Bool {
         let resolved = url.resolvingSymlinksInPath().standardizedFileURL.path
         guard !resolved.isEmpty, resolved != "/" else { return false }
-        for root in allowedRoots {
-            let normalizedRoot = URL(fileURLWithPath: root).standardizedFileURL.path
+        let roots = allowedRoots + (viaTrash ? [home + "/Desktop", home + "/Pictures"] : [])
+        for root in roots {
+            let normalizedRoot = URL(fileURLWithPath: root).resolvingSymlinksInPath().standardizedFileURL.path
             if resolved != normalizedRoot, resolved.hasPrefix(normalizedRoot + "/") {
-                return !isProtectedName(url.lastPathComponent)
+                let relative = String(resolved.dropFirst(normalizedRoot.count + 1))
+                let unsafeResolved = relative.split(separator: "/").contains {
+                    let name = String($0)
+                    return isProtectedName(name) || name.lowercased().hasSuffix(".app")
+                }
+                let unsafeOriginal = url.pathComponents.contains {
+                    isProtectedName($0) || $0.lowercased().hasSuffix(".app")
+                }
+                return !unsafeResolved && !unsafeOriginal
             }
         }
         return false
+    }
+
+    /// Auto-Flow only acts on a direct child of the user's chosen folder.
+    /// Resolve both paths to reject symlink escapes and system folders.
+    static func isRuleItem(_ url: URL, in folder: URL) -> Bool {
+        let root = folder.resolvingSymlinksInPath().standardizedFileURL
+        let item = url.resolvingSymlinksInPath().standardizedFileURL
+        let userHome = URL(fileURLWithPath: home).resolvingSymlinksInPath().standardizedFileURL.path
+        let tempRoot = URL(fileURLWithPath: "/private/tmp").resolvingSymlinksInPath().standardizedFileURL.path
+        let rootPath = root.path
+        guard rootPath.hasPrefix(userHome + "/") || rootPath.hasPrefix(tempRoot + "/") else { return false }
+        return item.deletingLastPathComponent().path == rootPath
+            && !item.pathComponents.contains(where: { $0.lowercased().hasSuffix(".app") })
+            && !url.pathComponents.contains(where: { $0.lowercased().hasSuffix(".app") })
+    }
+
+    static func isRuleDestination(_ folder: URL) -> Bool {
+        let resolved = folder.resolvingSymlinksInPath().standardizedFileURL.path
+        let userHome = URL(fileURLWithPath: home).resolvingSymlinksInPath().standardizedFileURL.path
+        let tempRoot = URL(fileURLWithPath: "/private/tmp").resolvingSymlinksInPath().standardizedFileURL.path
+        return (resolved.hasPrefix(userHome + "/") || resolved.hasPrefix(tempRoot + "/"))
+            && !folder.pathComponents.contains(where: { $0.lowercased().hasSuffix(".app") })
+    }
+
+    @discardableResult
+    static func removeRuleItem(_ url: URL, in folder: URL, viaTrash: Bool) throws -> Int64 {
+        guard isRuleItem(url, in: folder) else {
+            throw NSError(domain: "iOrganize", code: 2, userInfo: [
+                NSLocalizedDescriptionKey: "Refused to act outside the watched folder: \(url.path)"
+            ])
+        }
+        let size = FileSizer.size(of: url)
+        if viaTrash { try FileManager.default.trashItem(at: url, resultingItemURL: nil) }
+        else { try FileManager.default.removeItem(at: url) }
+        return size
     }
 
     /// Remove a file/folder, preferring the Trash when `viaTrash` so the
     /// user can always undo. Returns bytes freed (best effort).
     @discardableResult
     static func remove(_ url: URL, viaTrash: Bool) throws -> Int64 {
-        guard isRemovable(url) else {
+        guard isRemovable(url, viaTrash: viaTrash) else {
             throw NSError(domain: "iOrganize", code: 1, userInfo: [
                 NSLocalizedDescriptionKey: "Refused to delete outside safe roots: \(url.path)"
             ])
