@@ -25,3 +25,7 @@ This is a personal utility, not a substitute for backups or a general-purpose di
 ## Development approach
 
 I used AI coding tools while building and revising this project. I chose the product behavior, tested the app in regular use, reviewed the source, and made the safety and documentation changes recorded here. The code is available under the MIT License.
+
+## Portfolio evidence
+
+[Mac app suite case study](https://hikari-brandan.vercel.app/projects/macos-app-suite) documents the product story and current limits.
